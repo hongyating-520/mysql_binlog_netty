@@ -4,6 +4,7 @@ import com.example.netty_demo.MysqlSlave.Capability;
 import com.example.netty_demo.MysqlSlave.DataType;
 import com.example.netty_demo.Mysqlslav2.dataFormat.MysqlByteArrayoutputStream;
 import com.example.netty_demo.Mysqlslav2.protocol.Command;
+import com.mysql.cj.xdevapi.JsonArray;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -53,6 +54,7 @@ public class AuthCommand extends Command {
          * 1              length of auth-response
          * string[n]      auth-response
          */
+
         byte[] passwordSHA1 = "".equals(password) ? new byte[0] : DataType.passwordCompatibleWithMySQL411(password, salt);
         mysqlOut.writeFixedLengthInteger(passwordSHA1.length, 1);
         mysqlOut.writeByte(passwordSHA1);

@@ -1,5 +1,6 @@
 package com.example.netty_demo;
 
+import com.google.protobuf.GeneratedMessageV3;
 import com.protobuf.GameMsgProtocol;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
@@ -39,7 +40,8 @@ public class WebsocketDemo {
                         new HttpObjectAggregator(55555),//消息字节最大
                         new WebSocketServerProtocolHandler("/websocket"),//处理方式websocket
                         new GameMsgDecoder(),//消息msg消息对象解码转换
-                        new GameMsgHandler()//解码之后的消息会到Handler
+                        new GameMsgHandler(),//解码之后的消息会到Handler
+                        new GameMsgEecoder()//消息编码器：用户服务端到客户端消息发送时候消息编码
                 );
             }
         });
@@ -106,7 +108,7 @@ class GameMsgDecoder extends ChannelInboundHandlerAdapter{
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         System.out.println("解码器接收到消息——————："+msg);
-        //websocket 二进制消息会痛httpservercoder将消息转为BinaryWebSocketFrame
+        //websocket 二进制消息会从httpservercoder将消息转为BinaryWebSocketFrame
         BinaryWebSocketFrame binaryWebSocketFram = (BinaryWebSocketFrame)msg;
         ByteBuf content = binaryWebSocketFram.content();
         /**
@@ -141,6 +143,13 @@ class GameMsgDecoder extends ChannelInboundHandlerAdapter{
     }
 }
 //前后端统一使用protobuf消息加密，对应服务端发挥给客户段也需要做消息加密
+
+/**
+ * 1.获取msg对应字节数组
+ * 通过ByteBuff写入字节
+ * 通过BinaryWebSocketFrame写入到channel
+ *
+ */
 class GameMsgEecoder extends ChannelOutboundHandlerAdapter{
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
@@ -150,8 +159,18 @@ class GameMsgEecoder extends ChannelOutboundHandlerAdapter{
             return;
         }
         //信道广播后到客户端时会走加密
-        if (msg instanceof GameMsgProtocol.UserEntryResult){
-
+        if (msg instanceof  com.google.protobuf.GeneratedMessageV3){
+            ByteBuf buffer = ctx.alloc().buffer();
+            //写入字节
+            buffer.writeShort(0);
+            buffer.writeShort(GameMsgProtocol.UserEntryCmd.HEROAVATAR_FIELD_NUMBER);
+            //websocket 二进制消息会从httpservercoder将消息转为BinaryWebSocketFrame
+            //BinaryWebSocketFrame binaryWebSocketFram = (BinaryWebSocketFrame)msg;
+            //所以写消息的时候也需要通过这个对象写出去
+            byte[] bytes = ((GeneratedMessageV3) msg).toByteArray();
+            buffer.writeBytes(bytes);
+            BinaryWebSocketFrame socketFrame = new BinaryWebSocketFrame(buffer);
+            super.write(ctx,socketFrame,promise);
         }
     }
 }

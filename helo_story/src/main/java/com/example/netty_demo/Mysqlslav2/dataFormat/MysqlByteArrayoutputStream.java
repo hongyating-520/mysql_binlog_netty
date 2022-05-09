@@ -53,6 +53,9 @@ public class MysqlByteArrayoutputStream extends OutputStream {
         outputStream.write(code.getBytes());
         outputStream.write(DataType.STRING_NULL);
     }
+    public void writeString(String code) throws IOException {
+        outputStream.write(code.getBytes());
+    }
     public byte[] toBytes(){
         return outputStream.toByteArray();
     }

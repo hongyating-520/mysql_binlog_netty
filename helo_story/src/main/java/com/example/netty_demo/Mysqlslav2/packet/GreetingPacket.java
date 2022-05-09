@@ -42,6 +42,25 @@ public class GreetingPacket extends Packet {
         }
         System.out.println(toString());
     }
+    public GreetingPacket(byte[] bytes) throws IOException {
+        MysqlByteArrayInputStream buffer = new MysqlByteArrayInputStream(bytes);
+        this.protocolVersion = this.readFixedLengthInteger(buffer.read(0, 1));
+        this.serverVersion = this.nullTerminatedString(buffer);
+        this.threadId = this.readFixedLengthInteger(buffer.read(0, 4));
+        String scramblePrefix = this.nullTerminatedString(buffer);
+        //capability与高两位字节capability组合成完整capability
+        this.serverCapabilities = this.readFixedLengthInteger(buffer.read(0, 2));
+        //服务端字符集
+        this.CharacterSet = this.readFixedLengthInteger(buffer.read(0, 1));
+        //服务端状态
+        this.serverStatus = this.readFixedLengthInteger(buffer.read(0, 2));
+        buffer.skip(13); // reserved
+        this.scramble = scramblePrefix + this.nullTerminatedString(buffer);
+        if (buffer.available() > 0) {
+            this.pluginProvidedData = this.nullTerminatedString(buffer);
+        }
+        System.out.println(toString());
+    }
 
     @Override
     public String toString() {
