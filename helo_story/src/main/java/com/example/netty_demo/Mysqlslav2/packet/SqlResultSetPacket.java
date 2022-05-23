@@ -1,6 +1,7 @@
 package com.example.netty_demo.Mysqlslav2.packet;
 
 import com.example.netty_demo.MysqlSlave.BufferMsgPool;
+import com.example.netty_demo.MysqlSlave.PSVMDEMO;
 import com.example.netty_demo.Mysqlslav2.Bootstrap;
 import com.example.netty_demo.Mysqlslav2.dataFormat.MysqlByteArrayInputStream;
 import io.netty.buffer.ByteBuf;
@@ -36,29 +37,28 @@ public class SqlResultSetPacket extends Packet{
     private String[] values;
 
     public SqlResultSetPacket(ByteBuf bufPool, BufferMsgPool bufferMsgPool) throws IOException {
-        Packet.readMsgHead(bufPool);
-        byte[] bytes = new byte[bufPool.readableBytes()];
-        bufPool.readBytes(bytes);
-        byte sign = bytes[0];
-        if (sign == 0XFF){
-            new ErrorPacket(bytes);
+        bufPool.readBytes(Packet.headByte);
+        byte sign = Packet.headByte[0];
+        System.out.println("sign："+sign);
+        byte[] yizhix = new byte[275];
+        bufPool.readBytes(yizhix);
+        System.out.println("第一次回调：1000，5，26，0，0/："+Arrays.toString(yizhix));
+        System.out.println(new String(yizhix));
+        //过滤eof
+        PSVMDEMO.anotify();
+        while (true){
+            ByteBuf byteBufPool = bufferMsgPool.byteBufPool;
+            while (byteBufPool.isReadable()){
+                byteBufPool.readBytes(Packet.headByte);
+                System.out.println("eof:"+Arrays.toString(Packet.headByte));
+                short i = byteBufPool.readShort();
+                System.out.println("eof第一个字段:"+i);
+                if (i == (byte) 0xFE){
+                    break;
+                }
+            }
+
         }
-        switch (sign){
-            case (byte) 0XFF:new ErrorPacket(bytes);break;
-            case (byte)0XFE :case 0X00:
-                System.out.println("ok packet recive~~~~~~!");
-                break;
-            default://TextResultset包含：columnType;ColumnDefinition;TextResultRow
-                System.out.println(Arrays.toString(bytes));
-                byte[] secendBody = Bootstrap.channelRead(bufferMsgPool);
-                System.out.println(Arrays.toString(secendBody));
-        }
-//        MysqlByteArrayInputStream buffer = new MysqlByteArrayInputStream(bytes);
-//        List<String> values = new LinkedList<String>();
-//        while (buffer.available() > 0) {
-//            values.add(buffer.readLengthEncodedString());
-//        }
-//        this.values = values.toArray(new String[values.size()]);
     }
 
     public String[] getValues() {

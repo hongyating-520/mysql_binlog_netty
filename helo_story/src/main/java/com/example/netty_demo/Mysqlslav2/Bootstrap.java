@@ -14,6 +14,7 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
@@ -39,7 +40,7 @@ public class Bootstrap {
                 .option(ChannelOption.SO_REUSEADDR, true)
                 .option(ChannelOption.RCVBUF_ALLOCATOR, AdaptiveRecvByteBufAllocator.DEFAULT)
                 .option(ChannelOption.ALLOCATOR, PooledByteBufAllocator.DEFAULT)
-                //
+
                 .handler(new ChannelInitializer() {
                     @Override
                     protected void initChannel(Channel ch) throws Exception {
@@ -66,21 +67,25 @@ public class Bootstrap {
             //发送消息题
              bufPool = Bootstrap.channelWriteAndRead(channel, bufferMsgPool, bytes);
             Packet.readMsgHead(bufPool);
+            byte[] authResult = new byte[bufPool.readableBytes()];
+            bufPool.readBytes(authResult);
+            System.out.println(Arrays.toString(authResult));
             //正常这个位置返回07 00 00 02 00 00 00 02 00 00 00
             //我的是07 00 00 02 00 00 00 00 00 00 00
-            AuthSwitchPacket authSwitchPacket = new AuthSwitchPacket(bufPool);
-            byte[] authSwitchBody = authSwitchPacket.authenticateNativePasswordCommand();
-            if (authSwitchBody !=null){
-                bufPool = Bootstrap.channelWriteAndRead(channel, bufferMsgPool, authSwitchBody);
-                //认证返回如果还有异常则直接爆错
-                Packet.readMsgHead(msgBuffer);
-                byte[] error = new byte[msgBuffer.readableBytes()];
-                msgBuffer.readBytes(error);
-                ErrorPacket errorPacket = new ErrorPacket(error);
-                return;
-            }
+//            AuthSwitchPacket authSwitchPacket = new AuthSwitchPacket(bufPool);
+//            byte[] authSwitchBody = authSwitchPacket.authenticateNativePasswordCommand();
+//            if (authSwitchBody !=null){
+//                bufPool = Bootstrap.channelWriteAndRead(channel, bufferMsgPool, authSwitchBody);
+//                //认证返回如果还有异常则直接爆错
+//                Packet.readMsgHead(msgBuffer);
+//                byte[] error = new byte[msgBuffer.readableBytes()];
+//                msgBuffer.readBytes(error);
+//                ErrorPacket errorPacket = new ErrorPacket(error);
+//                return;
+//            }
             //开始读取binlog日志信息：执行show master status查看主从同步信息
             SqlCommand command = new SqlCommand("show master status",TextProtoCol.QUERY.ordinal());
+            //[5, 26, 0, 0, 2, 3, 100, 101, 102, 0, 0, 0, 4, 70, 105, 108, 101, 0, 12, -1,
             bufPool = Bootstrap.channelWriteAndRead(channel, bufferMsgPool, command.toByteArray());
             SqlResultSetPacket resultSetPacket = new SqlResultSetPacket(bufPool,bufferMsgPool);
         }catch (Exception e){
@@ -97,7 +102,10 @@ public class Bootstrap {
         PSVMDEMO.await();
         System.out.println("-----main thread notify------");
         while (true){
+            int i = bufPool.readableBytes();
+            System.out.println("bufPool字节："+i);
             if (bufPool.isReadable()){
+                System.out.println("bufPool字节isReadable");
                 break;
             }
         }
@@ -166,6 +174,8 @@ public class Bootstrap {
             System.out.println("接收到消息——————："+longText);
             //接收数据包
             bufferMsgPool.channel=channel;
+            int byteNum = byteBuf.readableBytes();
+            System.out.println("数据字节数："+byteNum);
             bufferMsgPool.writeBuffef(byteBuf);
             chManager.put(longText,bufferMsgPool);
             PSVMDEMO.anotify();

@@ -53,13 +53,16 @@ public class SocketDemo {
         for (byte b : header) {
             System.out.println(b);
         }
-        byte[] reBody1 = new byte[header[0]];
-        inputStream.read(reBody1, 0, header[0]);
+        byte[] reBody1 = new byte[888];
+
+        System.out.println(inputStream.available());
+        inputStream.read(reBody1, 0, 100);
         System.out.println(Arrays.toString(reBody1));
         //跳过所有eof包
         while (true){
             System.out.println("---------");
             returnBody1.read(header);
+            System.out.println("eof头内容："+Arrays.toString(header));
             byte[] eof = new byte[header[0]];
             inputStream.read(eof, 0, header[0]);
             byte b = eof[0];

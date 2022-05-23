@@ -32,4 +32,8 @@ public class BufferMsgPool {
             byteBufPool.writeBytes(msg);
         }
     }
+
+    public void clean(){
+        byteBufPool.clear();
+    }
 }
